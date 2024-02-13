@@ -101,6 +101,11 @@ contract TChoke is
     error TChokeDebtCeilingExceeded();
     error TChokePaused();
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
     function initialize(uint256 initialSupply) public initializer {
         __ReentrancyGuard_init();
         __AccessControl_init();
