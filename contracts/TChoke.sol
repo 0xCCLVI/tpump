@@ -135,6 +135,7 @@ contract TChoke is
     ) external onlyRole(LIQUIDITY_MANAGER_ROLE) {
         if (
             handler == address(0) ||
+            liquiditySource == address(0) ||
             liquiditySources[liquiditySource].handler != address(0) ||
             liquiditySources[liquiditySource].debt != 0
         ) revert TChokeInvalidHandler();
