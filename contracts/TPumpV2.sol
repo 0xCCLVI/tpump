@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.23;
 
-import "./TChoke.sol";
+import "./TPump.sol";
 
-interface ITChokeHandlerV2 {
+interface ITPumpHandlerV2 {
     function handleDeposit(address liquiditySource, address from, uint256 positionID)
         external
         returns (bytes32 depositID, uint256 tChokeAmount);
@@ -17,7 +17,7 @@ interface ITChokeHandlerV2 {
         returns (bool, bytes32, uint256);
 }
 
-contract TChokeV2 is TChoke {
+contract TPumpV2 is TPump {
     error TChokeInvalidLiquidation();
 
     event Liquidate(
@@ -49,7 +49,7 @@ contract TChokeV2 is TChoke {
 
         if (handler.paused) revert TChokePaused();
 
-        ITChokeHandlerV2 tChokeHandler = ITChokeHandlerV2(handler.handler);
+        ITPumpHandlerV2 tChokeHandler = ITPumpHandlerV2(handler.handler);
         (bool success, bytes32 depositID, uint256 tChokeAmount) =
             tChokeHandler.liquidate(source, positionID, owner, msg.sender);
 

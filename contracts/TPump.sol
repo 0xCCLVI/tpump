@@ -8,7 +8,7 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20Burnable
 import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 
-interface ITChokeHandler {
+interface ITPumpHandler {
     function handleDeposit(address liquiditySource, address from, uint256 positionID)
         external
         returns (bytes32 depositID, uint256 tChokeAmount);
@@ -18,7 +18,7 @@ interface ITChokeHandler {
         returns (bytes32 depositID);
 }
 
-contract TChoke is
+contract TPump is
     Initializable,
     ReentrancyGuardUpgradeable,
     AccessControlUpgradeable,
@@ -188,7 +188,7 @@ contract TChoke is
 
         if (handler.paused) revert TChokePaused();
 
-        ITChokeHandler tChokeHandler = ITChokeHandler(handler.handler);
+        ITPumpHandler tChokeHandler = ITPumpHandler(handler.handler);
 
         (bytes32 depositID, uint256 tChokeAmount) =
             tChokeHandler.handleDeposit(liquiditySource, _msgSender(), positionID);
@@ -229,7 +229,7 @@ contract TChoke is
             revert TChokeInvalidLiquidityPosition(liquiditySource);
         }
 
-        ITChokeHandler tChokeHandler = ITChokeHandler(handler.handler);
+        ITPumpHandler tChokeHandler = ITPumpHandler(handler.handler);
 
         bytes32 depositID = tChokeHandler.handleWithdraw(liquiditySource, _msgSender(), positionID);
 
