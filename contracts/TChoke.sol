@@ -9,17 +9,13 @@ import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 
 interface ITChokeHandler {
-    function handleDeposit(
-        address liquiditySource,
-        address from,
-        uint256 positionID
-    ) external returns (bytes32 depositID, uint256 tChokeAmount);
+    function handleDeposit(address liquiditySource, address from, uint256 positionID)
+        external
+        returns (bytes32 depositID, uint256 tChokeAmount);
 
-    function handleWithdraw(
-        address liquiditySource,
-        address to,
-        uint256 positionID
-    ) external returns (bytes32 depositID);
+    function handleWithdraw(address liquiditySource, address to, uint256 positionID)
+        external
+        returns (bytes32 depositID);
 }
 
 contract TChoke is
@@ -29,8 +25,7 @@ contract TChoke is
     ERC20Upgradeable,
     ERC20BurnableUpgradeable
 {
-    bytes32 public constant LIQUIDITY_MANAGER_ROLE =
-        keccak256("LIQUIDITY_MANAGER");
+    bytes32 public constant LIQUIDITY_MANAGER_ROLE = keccak256("LIQUIDITY_MANAGER");
     bytes32 public constant DEBT_MANAGER_ROLE = keccak256("DEBT_MANAGER");
 
     /**
@@ -54,8 +49,7 @@ contract TChoke is
      *
      * A `handler.debtCeiling` per liquidity source is implemented which its sum MUST add to `totalDebtCeiling` as well as `handler.debt` and `totalDebt`
      */
-    mapping(address liquiditySource => LiquiditySourceHandler)
-        public liquiditySources;
+    mapping(address liquiditySource => LiquiditySourceHandler) public liquiditySources;
 
     mapping(bytes32 => uint256) public deposits;
     mapping(bytes32 => address) public depositIDtoDepositor;
@@ -65,31 +59,18 @@ contract TChoke is
      */
 
     event Deposit(
-        address indexed liquiditySource,
-        address indexed depositor,
-        uint256 indexed positionID,
-        uint256 amount
+        address indexed liquiditySource, address indexed depositor, uint256 indexed positionID, uint256 amount
     );
 
     event Withdraw(
-        address indexed liquiditySource,
-        address indexed depositor,
-        uint256 indexed positionID,
-        uint256 amount
+        address indexed liquiditySource, address indexed depositor, uint256 indexed positionID, uint256 amount
     );
 
-    event AddLiquiditySource(
-        address indexed liquiditySource,
-        address indexed handler
-    );
+    event AddLiquiditySource(address indexed liquiditySource, address indexed handler);
 
     event RemoveLiquiditySource(address indexed liquiditySource);
 
-    event SetDebtCeiling(
-        address indexed liquiditySource,
-        uint256 debtCeiling,
-        bool paused
-    );
+    event SetDebtCeiling(address indexed liquiditySource, uint256 debtCeiling, bool paused);
 
     /**
      * @dev CustomErrors
@@ -100,11 +81,6 @@ contract TChoke is
     error TChokeInvalidHandler();
     error TChokeDebtCeilingExceeded();
     error TChokePaused();
-
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() {
-        _disableInitializers();
-    }
 
     function initialize(uint256 initialSupply) public initializer {
         __ReentrancyGuard_init();
@@ -129,23 +105,13 @@ contract TChoke is
      *
      */
 
-    function addLiquiditySource(
-        address liquiditySource,
-        address handler
-    ) external onlyRole(LIQUIDITY_MANAGER_ROLE) {
+    function addLiquiditySource(address liquiditySource, address handler) external onlyRole(LIQUIDITY_MANAGER_ROLE) {
         if (
-            handler == address(0) ||
-            liquiditySource == address(0) ||
-            liquiditySources[liquiditySource].handler != address(0) ||
-            liquiditySources[liquiditySource].debt != 0
+            handler == address(0) || liquiditySource == address(0)
+                || liquiditySources[liquiditySource].handler != address(0) || liquiditySources[liquiditySource].debt != 0
         ) revert TChokeInvalidHandler();
 
-        liquiditySources[liquiditySource] = LiquiditySourceHandler(
-            0,
-            0,
-            handler,
-            false
-        );
+        liquiditySources[liquiditySource] = LiquiditySourceHandler(0, 0, handler, false);
 
         emit AddLiquiditySource(liquiditySource, handler);
     }
@@ -160,21 +126,13 @@ contract TChoke is
      *
      */
 
-    function removeLiquiditySource(
-        address liquiditySource
-    ) external onlyRole(LIQUIDITY_MANAGER_ROLE) {
+    function removeLiquiditySource(address liquiditySource) external onlyRole(LIQUIDITY_MANAGER_ROLE) {
         if (
-            liquiditySources[liquiditySource].handler == address(0) ||
-            liquiditySources[liquiditySource].debt != 0 ||
-            liquiditySources[liquiditySource].debtCeiling != 0
+            liquiditySources[liquiditySource].handler == address(0) || liquiditySources[liquiditySource].debt != 0
+                || liquiditySources[liquiditySource].debtCeiling != 0
         ) revert TChokeInvalidHandler();
 
-        liquiditySources[liquiditySource] = LiquiditySourceHandler(
-            0,
-            0,
-            address(0),
-            false
-        );
+        liquiditySources[liquiditySource] = LiquiditySourceHandler(0, 0, address(0), false);
 
         emit RemoveLiquiditySource(liquiditySource);
     }
@@ -190,17 +148,15 @@ contract TChoke is
      * Emits a {SetDebtCeiling} event.
      */
 
-    function setDebtCeiling(
-        address liquiditySource,
-        uint256 _debtCeiling,
-        bool _paused
-    ) external onlyRole(DEBT_MANAGER_ROLE) {
-        if (liquiditySources[liquiditySource].handler == address(0))
+    function setDebtCeiling(address liquiditySource, uint256 _debtCeiling, bool _paused)
+        external
+        onlyRole(DEBT_MANAGER_ROLE)
+    {
+        if (liquiditySources[liquiditySource].handler == address(0)) {
             revert TChokeInvalidHandler();
+        }
 
-        totalDebtCeiling =
-            totalDebtCeiling -
-            liquiditySources[liquiditySource].debtCeiling;
+        totalDebtCeiling = totalDebtCeiling - liquiditySources[liquiditySource].debtCeiling;
 
         liquiditySources[liquiditySource].debtCeiling = _debtCeiling;
 
@@ -220,43 +176,30 @@ contract TChoke is
      * Emits a {Deposit} event.
      */
 
-    function deposit(
-        address liquiditySource,
-        uint256 positionID
-    ) external nonReentrant {
+    function deposit(address liquiditySource, uint256 positionID) external nonReentrant {
         if (totalDebt > totalDebtCeiling) revert TChokeDebtCeilingExceeded();
 
-        LiquiditySourceHandler storage handler = liquiditySources[
-            liquiditySource
-        ];
+        LiquiditySourceHandler storage handler = liquiditySources[liquiditySource];
 
         if (
-            liquiditySource == address(0) ||
-            handler.handler == address(0) ||
-            positionID == 0 ||
-            handler.debt > handler.debtCeiling
+            liquiditySource == address(0) || handler.handler == address(0) || positionID == 0
+                || handler.debt > handler.debtCeiling
         ) revert TChokeInvalidLiquidityPosition(liquiditySource);
 
         if (handler.paused) revert TChokePaused();
 
         ITChokeHandler tChokeHandler = ITChokeHandler(handler.handler);
 
-        (bytes32 depositID, uint256 tChokeAmount) = tChokeHandler.handleDeposit(
-            liquiditySource,
-            _msgSender(),
-            positionID
-        );
+        (bytes32 depositID, uint256 tChokeAmount) =
+            tChokeHandler.handleDeposit(liquiditySource, _msgSender(), positionID);
 
-        if (
-            tChokeAmount == 0 ||
-            deposits[depositID] != 0 ||
-            depositIDtoDepositor[depositID] != address(0)
-        ) revert TChokeInvalidLiquidityPosition(liquiditySource);
+        if (tChokeAmount == 0 || deposits[depositID] != 0 || depositIDtoDepositor[depositID] != address(0)) {
+            revert TChokeInvalidLiquidityPosition(liquiditySource);
+        }
 
-        if (
-            (totalDebt + tChokeAmount) > totalDebtCeiling ||
-            (handler.debt + tChokeAmount) > handler.debtCeiling
-        ) revert TChokeDebtCeilingExceeded();
+        if ((totalDebt + tChokeAmount) > totalDebtCeiling || (handler.debt + tChokeAmount) > handler.debtCeiling) {
+            revert TChokeDebtCeilingExceeded();
+        }
 
         deposits[depositID] = tChokeAmount;
 
@@ -279,29 +222,21 @@ contract TChoke is
      *
      */
 
-    function withdraw(
-        address liquiditySource,
-        uint256 positionID
-    ) external nonReentrant {
-        LiquiditySourceHandler storage handler = liquiditySources[
-            liquiditySource
-        ];
+    function withdraw(address liquiditySource, uint256 positionID) external nonReentrant {
+        LiquiditySourceHandler storage handler = liquiditySources[liquiditySource];
 
-        if (handler.handler == address(0) || positionID == 0)
+        if (handler.handler == address(0) || positionID == 0) {
             revert TChokeInvalidLiquidityPosition(liquiditySource);
+        }
 
         ITChokeHandler tChokeHandler = ITChokeHandler(handler.handler);
 
-        bytes32 depositID = tChokeHandler.handleWithdraw(
-            liquiditySource,
-            _msgSender(),
-            positionID
-        );
+        bytes32 depositID = tChokeHandler.handleWithdraw(liquiditySource, _msgSender(), positionID);
 
         uint256 tChokeAmount = deposits[depositID];
-        if (
-            tChokeAmount == 0 || depositIDtoDepositor[depositID] != _msgSender()
-        ) revert TChokeInvalidDeposit(depositID);
+        if (tChokeAmount == 0 || depositIDtoDepositor[depositID] != _msgSender()) {
+            revert TChokeInvalidDeposit(depositID);
+        }
 
         _burn(_msgSender(), tChokeAmount);
 
